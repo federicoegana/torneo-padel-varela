@@ -1,0 +1,1083 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Liga Barrio 🎾</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  PASO 1: Reemplazá estos valores con los de tu Firebase     ║
+     ║  (ver instrucciones al final del archivo)                   ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<script>
+  const FIREBASE_CONFIG = {
+    apiKey:            "AIzaSyATcaNkWVvtl9k2dkaVdUU6qmXxhVmpwPY",
+    authDomain:        "torneo-padel-varela.firebaseapp.com",
+    projectId:         "torneo-padel-varela",
+    storageBucket:     "torneo-padel-varela.firebasestorage.app",
+    messagingSenderId: "46605931178",
+    appId:             "1:46605931178:web:db23c9cc8ed1840b8436d3"
+  };
+  const ADMIN_PASSWORD = "Varela2026"; // Cambiá esto
+</script>
+
+<style>
+  :root {
+    --navy:   #0f172a;
+    --blue:   #1d4ed8;
+    --court:  #16a34a;
+    --gold:   #f59e0b;
+    --red:    #ef4444;
+    --bg:     #f1f5f9;
+    --card:   #ffffff;
+    --border: #e2e8f0;
+    --text:   #0f172a;
+    --muted:  #64748b;
+    --font-display: 'Bebas Neue', sans-serif;
+    --font-body:    'DM Sans', sans-serif;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* HEADER */
+  .header {
+    background: var(--navy);
+    padding: 0 16px;
+    position: sticky; top: 0; z-index: 50;
+    box-shadow: 0 2px 12px rgba(0,0,0,.3);
+  }
+  .header-inner {
+    max-width: 640px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 0;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-emoji { font-size: 28px; line-height: 1; }
+  .logo-title { font-family: var(--font-display); font-size: 26px; color: #fff; letter-spacing: 2px; line-height: 1; }
+  .logo-sub { font-size: 10px; color: #94a3b8; letter-spacing: 3px; text-transform: uppercase; }
+  .btn-admin {
+    background: rgba(255,255,255,.08); color: #fff;
+    border: 1px solid rgba(255,255,255,.2); border-radius: 8px;
+    padding: 7px 14px; cursor: pointer; font-size: 12px; font-family: var(--font-body);
+    display: flex; align-items: center; gap: 5px; transition: all .2s;
+  }
+  .btn-admin:hover { background: rgba(255,255,255,.15); }
+  .btn-admin.active { background: var(--court); border-color: var(--court); font-weight: 700; }
+
+  /* NAV */
+  .nav {
+    background: var(--card); border-bottom: 1px solid var(--border);
+    display: flex; overflow-x: auto; position: sticky; top: 57px; z-index: 40;
+  }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-inner { max-width: 640px; margin: 0 auto; display: flex; }
+  .nav-btn {
+    padding: 13px 16px; border: none; background: none; cursor: pointer;
+    font-size: 12px; font-family: var(--font-body); font-weight: 500;
+    color: var(--muted); white-space: nowrap; border-bottom: 2px solid transparent;
+    display: flex; align-items: center; gap: 5px; transition: all .15s;
+  }
+  .nav-btn:hover { color: var(--blue); }
+  .nav-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 700; }
+
+  /* MAIN */
+  .main { max-width: 640px; margin: 0 auto; padding: 16px 12px 40px; }
+
+  /* CARDS */
+  .card {
+    background: var(--card); border-radius: 14px; padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.07); margin-bottom: 12px;
+    animation: fadeUp .25s ease both;
+  }
+  @keyframes fadeUp { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform: none; } }
+
+  /* SECTION TITLE */
+  .section-title {
+    font-family: var(--font-display); font-size: 22px; letter-spacing: 1px;
+    color: var(--navy); margin-bottom: 16px; display: flex; align-items: center; gap: 8px;
+  }
+
+  /* TABLE */
+  .table-wrap { overflow-x: auto; border-radius: 14px; box-shadow: 0 1px 4px rgba(0,0,0,.07); }
+  table { width: 100%; border-collapse: collapse; background: var(--card); }
+  thead tr { background: var(--navy); }
+  th { padding: 10px 8px; color: #fff; font-size: 11px; font-weight: 700; text-align: center; letter-spacing: .5px; }
+  td { padding: 9px 8px; font-size: 13px; text-align: center; border-bottom: 1px solid var(--border); }
+  tr:last-child td { border-bottom: none; }
+  tr:nth-child(even) td { background: #f8fafc; }
+  td.team-name { font-weight: 600; text-align: left; }
+
+  /* BADGE */
+  .badge {
+    display: inline-flex; align-items: center; border-radius: 20px;
+    padding: 2px 10px; font-size: 11px; font-weight: 700;
+  }
+  .badge-green  { background: #dcfce7; color: #15803d; }
+  .badge-gray   { background: #f1f5f9; color: #64748b; }
+  .badge-yellow { background: #fef3c7; color: #b45309; }
+  .badge-red    { background: #fee2e2; color: #dc2626; }
+  .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+
+  /* MATCH CARD */
+  .match-card {
+    background: var(--card); border-radius: 12px; padding: 14px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.07); margin-bottom: 10px;
+    border-left: 4px solid var(--border); transition: border-color .2s;
+  }
+  .match-card.played { border-left-color: var(--court); }
+  .match-card.wo { border-left-color: var(--red); }
+  .match-header { display: flex; justify-content: space-between; margin-bottom: 10px; }
+  .match-teams { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+  .team-label { font-weight: 700; font-size: 14px; color: var(--navy); flex: 1; text-align: center; }
+  .score-box {
+    font-family: var(--font-display); font-size: 26px; color: var(--navy);
+    min-width: 60px; text-align: center; letter-spacing: 2px;
+  }
+  .match-info { font-size: 11px; color: var(--muted); text-align: center; margin-top: 8px; }
+
+  /* SLOT GRID */
+  .slots { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .slot {
+    border-radius: 10px; padding: 8px 12px; min-width: 90px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    border: 1px solid; transition: all .15s;
+  }
+  .slot.free    { background: #f0fdf4; border-color: #bbf7d0; }
+  .slot.booked  { background: #fefce8; border-color: #fde68a; }
+  .slot-time    { font-size: 12px; font-weight: 700; }
+  .slot-team    { font-size: 10px; color: var(--muted); }
+  .slot-action  { font-size: 10px; cursor: pointer; background: none; border: none; font-family: var(--font-body); }
+  .slot.free .slot-action  { color: var(--blue); }
+  .slot.booked .slot-action { color: var(--red); }
+
+  /* ROUND PILLS */
+  .round-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .round-pill {
+    padding: 5px 14px; border-radius: 20px; border: 1px solid var(--border);
+    background: var(--card); cursor: pointer; font-size: 12px; font-weight: 600;
+    color: var(--muted); transition: all .15s;
+  }
+  .round-pill:hover { border-color: var(--blue); color: var(--blue); }
+  .round-pill.active { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* VOTE BAR */
+  .vote-bar-bg { background: #e2e8f0; border-radius: 6px; height: 6px; margin-top: 8px; overflow: hidden; }
+  .vote-bar    { height: 100%; border-radius: 6px; transition: width .4s ease; }
+
+  /* INPUTS */
+  input, select {
+    width: 100%; padding: 9px 12px; border-radius: 9px;
+    border: 1px solid var(--border); font-family: var(--font-body); font-size: 14px;
+    margin-bottom: 8px; outline: none; background: #fff; transition: border-color .15s;
+  }
+  input:focus, select:focus { border-color: var(--blue); }
+  label.lbl { font-size: 12px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; }
+
+  /* BUTTONS */
+  .btn { border: none; border-radius: 9px; padding: 9px 18px; cursor: pointer; font-family: var(--font-body); font-size: 13px; font-weight: 600; transition: all .15s; display: inline-flex; align-items: center; gap: 5px; }
+  .btn-primary   { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: #1e40af; }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { background: #e2e8f0; }
+  .btn-danger    { background: var(--red); color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-sm { padding: 5px 11px; font-size: 11px; border-radius: 7px; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px; }
+
+  /* MODAL */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,.55);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 200; padding: 16px; animation: fadeIn .15s;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--card); border-radius: 18px; padding: 24px;
+    width: 100%; max-width: 420px; box-shadow: 0 24px 60px rgba(0,0,0,.25);
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity:0; } to { transform: none; opacity:1; } }
+  .modal-title { font-family: var(--font-display); font-size: 20px; color: var(--navy); margin-bottom: 14px; letter-spacing: 1px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+    background: var(--navy); color: #fff; padding: 10px 22px;
+    border-radius: 30px; font-size: 13px; font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,.25); z-index: 300;
+    animation: toastIn .2s ease; white-space: nowrap;
+  }
+  .toast.error { background: var(--red); }
+  @keyframes toastIn { from { opacity:0; transform: translateX(-50%) translateY(10px); } to { opacity:1; transform: translateX(-50%) translateY(0); } }
+
+  /* MISC */
+  .empty { text-align: center; color: var(--muted); padding: 40px 20px; font-size: 14px; }
+  .info-box { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 16px; font-size: 13px; color: #1e40af; margin-bottom: 14px; }
+  .legend { font-size: 11px; color: var(--muted); margin-top: 10px; line-height: 1.6; }
+  .rule-section { margin-bottom: 14px; }
+  .rule-section h3 { font-family: var(--font-display); font-size: 16px; color: var(--blue); letter-spacing: .5px; margin-bottom: 8px; }
+  .rule-section li { font-size: 13px; color: #374151; margin-bottom: 5px; line-height: 1.5; }
+
+  /* SPINNER */
+  .spinner { display: inline-block; width: 18px; height: 18px; border: 2px solid #fff; border-top-color: transparent; border-radius: 50%; animation: spin .6s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* SETUP SCREEN */
+  .setup-screen { max-width: 500px; margin: 60px auto; padding: 0 16px; }
+  .setup-card { background: var(--card); border-radius: 20px; padding: 32px; box-shadow: 0 4px 24px rgba(0,0,0,.1); }
+  .setup-title { font-family: var(--font-display); font-size: 32px; letter-spacing: 2px; color: var(--navy); margin-bottom: 8px; }
+  .setup-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.5; }
+  .code-block { background: #0f172a; color: #7dd3fc; border-radius: 10px; padding: 14px 16px; font-size: 12px; font-family: monospace; line-height: 1.8; margin: 12px 0; overflow-x: auto; }
+  .step { display: flex; gap: 12px; margin-bottom: 20px; }
+  .step-num { background: var(--blue); color: #fff; width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; margin-top: 2px; }
+  .step-body h4 { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .step-body p { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  a { color: var(--blue); }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import {
+  getFirestore, collection, doc, getDocs, setDoc, deleteDoc,
+  onSnapshot, query, orderBy, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ─── FIREBASE INIT ────────────────────────────────────────────────────────────
+let db = null;
+let firebaseOk = false;
+
+function initFirebase() {
+  try {
+    if (FIREBASE_CONFIG.apiKey === "TU_API_KEY") return false;
+    const app = initializeApp(FIREBASE_CONFIG);
+    db = getFirestore(app);
+    return true;
+  } catch(e) { console.error(e); return false; }
+}
+
+// ─── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  teams: [], matches: [], courts: [], bookings: [], votes: [], results: [],
+  tab: "tabla", isAdmin: false, loading: true,
+  modal: null,   // { type, data }
+  toast: null,
+};
+
+function setState(partial) {
+  state = { ...state, ...partial };
+  render();
+}
+
+// ─── FIRESTORE HELPERS ────────────────────────────────────────────────────────
+async function fsGet(col) {
+  const snap = await getDocs(collection(db, col));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+async function fsSet(col, id, data) {
+  await setDoc(doc(db, col, id), { ...data, _ts: serverTimestamp() }, { merge: true });
+}
+async function fsDel(col, id) {
+  await deleteDoc(doc(db, col, id));
+}
+
+// Subscribe to a collection and update state
+function subscribe(col, key) {
+  onSnapshot(collection(db, col), snap => {
+    const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    setState({ [key]: docs });
+  });
+}
+
+// ─── LOAD DATA ────────────────────────────────────────────────────────────────
+async function loadAll() {
+  if (!firebaseOk) { setState({ loading: false }); return; }
+  subscribe("teams",    "teams");
+  subscribe("matches",  "matches");
+  subscribe("courts",   "courts");
+  subscribe("bookings", "bookings");
+  subscribe("votes",    "votes");
+  subscribe("results",  "results");
+  setState({ loading: false });
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function teamName(id) {
+  const t = state.teams.find(x => x.id === id);
+  return t ? t.name : id;
+}
+
+function calcStandings() {
+  const stats = {};
+  state.teams.forEach(t => {
+    stats[t.id] = { id: t.id, name: t.name, pj:0, pg:0, pp:0, pts:0, sf:0, sc:0 };
+  });
+  state.results.forEach(r => {
+    const m = state.matches.find(x => x.id === r.matchId);
+    if (!m) return;
+    const h = stats[m.homeId], a = stats[m.awayId];
+    if (!h || !a) return;
+    h.pj++; a.pj++;
+    h.sf += r.homeSets; h.sc += r.awaySets;
+    a.sf += r.awaySets; a.sc += r.homeSets;
+    if (r.homeSets > r.awaySets) {
+      h.pg++; a.pp++;
+      h.pts += r.awaySets === 0 ? 3 : 2;
+      if (r.awaySets === 1) a.pts += 1;
+    } else {
+      a.pg++; h.pp++;
+      a.pts += r.homeSets === 0 ? 3 : 2;
+      if (r.homeSets === 1) h.pts += 1;
+    }
+  });
+  return Object.values(stats).sort((a,b) => {
+    if (b.pts !== a.pts) return b.pts - a.pts;
+    return (b.sf-b.sc) - (a.sf-a.sc);
+  });
+}
+
+function generateFixture(teams) {
+  const list = [...teams];
+  if (list.length % 2 !== 0) list.push({ id: "bye" });
+  const n = list.length, rounds = n - 1;
+  const matches = [];
+  let id = 1;
+  for (let r = 0; r < rounds; r++) {
+    for (let i = 0; i < n / 2; i++) {
+      const h = list[i], a = list[n - 1 - i];
+      if (h.id !== "bye" && a.id !== "bye") {
+        matches.push({ id: String(id++), round: r+1, homeId: h.id, awayId: a.id, status: "pendiente" });
+      }
+    }
+    list.splice(1, 0, list.pop());
+  }
+  return matches;
+}
+
+// ─── TOAST ───────────────────────────────────────────────────────────────────
+function toast(msg, type = "ok") {
+  setState({ toast: { msg, type } });
+  setTimeout(() => setState({ toast: null }), 3000);
+}
+
+// ─── ADMIN ACTIONS ───────────────────────────────────────────────────────────
+async function addTeam(name, p1, p2) {
+  const id = Date.now().toString();
+  const team = { id, name, players: [
+    { id: `${id}-1`, name: p1 },
+    { id: `${id}-2`, name: p2 },
+  ]};
+  await fsSet("teams", id, team);
+  toast(`Equipo "${name}" agregado ✅`);
+}
+
+async function removeTeam(id) {
+  await fsDel("teams", id);
+  toast("Equipo eliminado");
+}
+
+async function generateFixtureAction() {
+  if (state.teams.length < 2) { toast("Necesitás al menos 2 equipos", "err"); return; }
+  const fix = generateFixture(state.teams);
+  for (const m of fix) await fsSet("matches", m.id, m);
+  toast(`Fixture generado: ${fix.length} partidos ✅`);
+}
+
+async function resetFixture() {
+  for (const m of state.matches)  await fsDel("matches",  m.id);
+  for (const r of state.results)  await fsDel("results",  r.id);
+  for (const v of state.votes)    await fsDel("votes",    v.id);
+  for (const b of state.bookings) await fsDel("bookings", b.id);
+  toast("Fixture reiniciado");
+}
+
+async function saveResult(matchId, homeSets, awaySets) {
+  const id = `res-${matchId}`;
+  await fsSet("results", id, { id, matchId, homeSets, awaySets });
+  await fsSet("matches", matchId, { status: "jugado" });
+  toast("Resultado guardado ✅");
+}
+
+async function addCourt(name, slotsRaw) {
+  const id = Date.now().toString();
+  const slots = slotsRaw.split(",").map(s => s.trim()).filter(Boolean);
+  await fsSet("courts", id, { id, name, slots });
+  toast("Cancha agregada ✅");
+}
+
+async function removeCourt(id) {
+  await fsDel("courts", id);
+  toast("Cancha eliminada");
+}
+
+async function bookSlot(courtId, slot, teamId) {
+  const existing = state.bookings.find(b => b.courtId === courtId && b.timeSlot === slot);
+  if (existing) { toast("Horario ya reservado", "err"); return; }
+  const id = Date.now().toString();
+  await fsSet("bookings", id, { id, courtId, timeSlot: slot, teamId });
+  toast("Reserva confirmada ✅");
+}
+
+async function cancelBooking(id) {
+  await fsDel("bookings", id);
+  toast("Reserva cancelada");
+}
+
+async function submitVotes(matchId, voterTeamId, flaggedIds, levelOk) {
+  if (levelOk || flaggedIds.length === 0) { toast("Voto registrado ✅"); return; }
+  for (const pid of flaggedIds) {
+    const id = `${matchId}-${voterTeamId}-${pid}`;
+    await fsSet("votes", id, { id, matchId, voterTeamId, flaggedId: pid });
+  }
+  toast("Voto registrado ✅");
+}
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function openModal(type, data = {}) { setState({ modal: { type, data } }); }
+function closeModal() { setState({ modal: null }); }
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function render() {
+  const root = document.getElementById("root");
+  if (!root) return;
+
+  // Not configured yet
+  if (!firebaseOk) {
+    root.innerHTML = renderSetup();
+    return;
+  }
+
+  if (state.loading) {
+    root.innerHTML = `<div class="empty" style="padding:80px">
+      <div class="spinner" style="border-color:#1d4ed8;border-top-color:transparent;width:32px;height:32px;margin:0 auto 12px"></div>
+      Cargando torneo...
+    </div>`;
+    return;
+  }
+
+  root.innerHTML = `
+    ${renderHeader()}
+    ${renderNav()}
+    <div class="main">${renderTab()}</div>
+    ${renderModal()}
+    ${state.toast ? `<div class="toast ${state.toast.type === 'err' ? 'error' : ''}">${state.toast.msg}</div>` : ""}
+  `;
+  attachEvents();
+}
+
+// ─── SETUP SCREEN ─────────────────────────────────────────────────────────────
+function renderSetup() {
+  return `
+  <div class="setup-screen">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:48px">🎾</div>
+      <div style="font-family:var(--font-display);font-size:36px;letter-spacing:2px;color:var(--navy)">LIGA BARRIO</div>
+    </div>
+    <div class="setup-card">
+      <div class="setup-title">Configuración inicial</div>
+      <div class="setup-sub">Para que la app funcione de forma independiente y compartida, necesitás conectarla a Firebase (gratis). Seguí estos pasos:</div>
+
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h4>Creá un proyecto Firebase</h4>
+          <p>Entrá a <a href="https://console.firebase.google.com" target="_blank">console.firebase.google.com</a>, hacé click en <b>"Agregar proyecto"</b>, poné un nombre (ej: <i>liga-barrio</i>) y seguí los pasos.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h4>Activá Firestore Database</h4>
+          <p>En el menú lateral elegí <b>Build → Firestore Database</b>, hacé click en <b>"Create database"</b> y elegí <b>Start in test mode</b>.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h4>Obtené la configuración</h4>
+          <p>Andá a <b>Project settings (⚙️) → General → Your apps → Add app → Web (&lt;/&gt;)</b>. Copiá el objeto <code>firebaseConfig</code> que aparece.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h4>Pegalo en este archivo</h4>
+          <p>Abrí el archivo <code>liga-barrio.html</code> con el Bloc de notas (click derecho → Abrir con → Bloc de notas) y reemplazá los valores en la sección <code>FIREBASE_CONFIG</code> al inicio del archivo:</p>
+          <div class="code-block">const FIREBASE_CONFIG = {<br>
+&nbsp;&nbsp;apiKey: "AIzaSy...",<br>
+&nbsp;&nbsp;authDomain: "mi-proyecto.firebaseapp.com",<br>
+&nbsp;&nbsp;projectId: "mi-proyecto",<br>
+&nbsp;&nbsp;storageBucket: "mi-proyecto.appspot.com",<br>
+&nbsp;&nbsp;messagingSenderId: "123456789",<br>
+&nbsp;&nbsp;appId: "1:123...:web:abc..."<br>
+};</div>
+          <p style="margin-top:8px">Guardá el archivo. ¡Listo! Compartilo con todos y verán los datos en tiempo real.</p>
+        </div>
+      </div>
+
+      <div style="background:#fef3c7;border-radius:10px;padding:12px 14px;font-size:13px;color:#92400e;margin-top:8px">
+        💡 <b>Para compartirlo:</b> subí el archivo a <a href="https://drive.google.com" target="_blank">Google Drive</a> y compartí el link, o usá <a href="https://tiiny.host" target="_blank">tiiny.host</a> para publicarlo como web en segundos (gratis).
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── HEADER ──────────────────────────────────────────────────────────────────
+function renderHeader() {
+  return `<header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-emoji">🎾</div>
+        <div>
+          <div class="logo-title">LIGA BARRIO</div>
+          <div class="logo-sub">Gestión del Torneo</div>
+        </div>
+      </div>
+      <button class="btn-admin ${state.isAdmin ? 'active' : ''}" id="btn-admin-toggle">
+        ${state.isAdmin ? '🔓 Admin ON' : '🔒 Admin'}
+      </button>
+    </div>
+  </header>`;
+}
+
+// ─── NAV ─────────────────────────────────────────────────────────────────────
+function renderNav() {
+  const tabs = [
+    { id: "tabla",      label: "📊 Tabla" },
+    { id: "fixture",    label: "📅 Fixture" },
+    { id: "canchas",    label: "🎾 Canchas" },
+    { id: "nivel",      label: "⚠️ Nivel" },
+    { id: "reglamento", label: "📋 Reglamento" },
+    ...(state.isAdmin ? [{ id: "admin", label: "✏️ Admin" }] : []),
+  ];
+  return `<nav class="nav"><div class="nav-inner">
+    ${tabs.map(t => `<button class="nav-btn ${state.tab === t.id ? 'active' : ''}" data-tab="${t.id}">${t.label}</button>`).join("")}
+  </div></nav>`;
+}
+
+// ─── TAB ROUTER ──────────────────────────────────────────────────────────────
+function renderTab() {
+  switch(state.tab) {
+    case "tabla":      return renderTabla();
+    case "fixture":    return renderFixture();
+    case "canchas":    return renderCanchas();
+    case "nivel":      return renderNivel();
+    case "reglamento": return renderReglamento();
+    case "admin":      return renderAdmin();
+    default:           return "";
+  }
+}
+
+// ─── TABLA ───────────────────────────────────────────────────────────────────
+function renderTabla() {
+  const standings = calcStandings();
+  const medals = ["🥇","🥈","🥉"];
+  return `
+  <div class="section-title">🏆 Tabla de Posiciones</div>
+  ${standings.length === 0 ? `<div class="empty">No hay equipos todavía.</div>` : `
+  <div class="table-wrap">
+    <table>
+      <thead><tr>
+        <th>#</th><th style="text-align:left">Equipo</th>
+        <th>PJ</th><th>PG</th><th>PP</th><th>SF</th><th>SC</th><th>PTS</th><th>⚠️</th>
+      </tr></thead>
+      <tbody>
+        ${standings.map((t,i) => {
+          const team = state.teams.find(x => x.id === t.id);
+          const players = team?.players || [];
+          const flags = players.reduce((acc,p) => acc + state.votes.filter(v => v.flaggedId === p.id).length, 0);
+          return `<tr>
+            <td style="font-weight:700;color:${i<3?'#f59e0b':'#374151'}">${medals[i] || i+1}</td>
+            <td class="team-name">${t.name}</td>
+            <td>${t.pj}</td><td>${t.pg}</td><td>${t.pp}</td>
+            <td>${t.sf}</td><td>${t.sc}</td>
+            <td style="font-weight:800;color:var(--blue)">${t.pts}</td>
+            <td style="color:${flags>=4?'var(--red)':flags>=2?'#f59e0b':'var(--muted)'}">${flags||"-"}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  </div>
+  <div class="legend">
+    <b>Puntos:</b> 2-0 = 3pts · 2-1 = 2pts · 1-2 = 1pt · 0-2 = 0pts &nbsp;|&nbsp;
+    <b>⚠️</b> = reportes de nivel (4 = revisión obligatoria)
+  </div>`}`;
+}
+
+// ─── FIXTURE ─────────────────────────────────────────────────────────────────
+function renderFixture() {
+  const rounds = [...new Set(state.matches.map(m => m.round))].sort((a,b)=>a-b);
+  const selectedRound = state.selectedRound || (rounds[0] || 1);
+  const roundMatches = state.matches.filter(m => m.round === selectedRound);
+
+  return `
+  <div class="section-title">📅 Fixture</div>
+  ${rounds.length === 0 ? `<div class="empty">El fixture se genera desde Admin.</div>` : ""}
+  <div class="round-pills">
+    ${rounds.map(r => `<button class="round-pill ${r===selectedRound?'active':''}" data-round="${r}">Fecha ${r}</button>`).join("")}
+  </div>
+  <div>
+    ${roundMatches.map(m => {
+      const res = state.results.find(r => r.matchId === m.id);
+      const booking = state.bookings.find(b => b.matchId === m.id);
+      const court = booking ? state.courts.find(c => c.id === booking.courtId) : null;
+      return `
+      <div class="match-card ${m.status === 'jugado' ? 'played' : ''}">
+        <div class="match-header">
+          <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase">Fecha ${m.round}</span>
+          <span class="badge ${m.status==='jugado'?'badge-green':'badge-gray'}">${m.status}</span>
+        </div>
+        <div class="match-teams">
+          <span class="team-label">${teamName(m.homeId)}</span>
+          <span class="score-box">${res ? `${res.homeSets}-${res.awaySets}` : "VS"}</span>
+          <span class="team-label">${teamName(m.awayId)}</span>
+        </div>
+        ${court ? `<div class="match-info">🎾 ${court.name} · ${booking.timeSlot}</div>` : ""}
+        <div class="btn-row" style="margin-top:10px">
+          ${state.isAdmin && m.status !== 'jugado' ? `<button class="btn btn-primary btn-sm" data-action="open-result" data-id="${m.id}">Cargar resultado</button>` : ""}
+          ${m.status === 'jugado' ? `<button class="btn btn-secondary btn-sm" data-action="open-vote" data-id="${m.id}">Votar nivel</button>` : ""}
+        </div>
+      </div>`;
+    }).join("")}
+  </div>`;
+}
+
+// ─── CANCHAS ─────────────────────────────────────────────────────────────────
+function renderCanchas() {
+  return `
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+    <div class="section-title" style="margin-bottom:0">🎾 Canchas y Horarios</div>
+    ${state.isAdmin ? `<button class="btn btn-primary btn-sm" data-action="open-add-court">＋ Agregar</button>` : ""}
+  </div>
+  ${state.courts.length === 0 ? `<div class="empty">No hay canchas cargadas.</div>` : ""}
+  ${state.courts.map(court => {
+    const courtBookings = state.bookings.filter(b => b.courtId === court.id);
+    return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-weight:700;font-size:16px">🏟️ ${court.name}</div>
+        ${state.isAdmin ? `<button class="btn btn-secondary btn-sm" style="border-color:var(--red);color:var(--red)" data-action="del-court" data-id="${court.id}">Eliminar</button>` : ""}
+      </div>
+      <div class="slots">
+        ${(court.slots||[]).map(slot => {
+          const b = courtBookings.find(x => x.timeSlot === slot);
+          const tn = b ? (state.teams.find(t => t.id === b.teamId)?.name || b.teamId) : null;
+          return b
+            ? `<div class="slot booked">
+                <div class="slot-time">${slot}</div>
+                <div class="slot-team">${tn}</div>
+                <button class="slot-action" data-action="cancel-booking" data-id="${b.id}">✕ liberar</button>
+               </div>`
+            : `<div class="slot free">
+                <div class="slot-time">${slot}</div>
+                <div class="slot-team">Libre</div>
+                <button class="slot-action" data-action="open-book" data-court="${court.id}" data-slot="${slot}">+ reservar</button>
+               </div>`;
+        }).join("")}
+      </div>
+    </div>`;
+  }).join("")}`;
+}
+
+// ─── NIVEL ───────────────────────────────────────────────────────────────────
+function renderNivel() {
+  const allPlayers = state.teams.flatMap(t => (t.players||[]).map(p => ({ ...p, teamName: t.name })));
+  return `
+  <div class="section-title">⚠️ Control de Nivel</div>
+  <div class="info-box">
+    Si un jugador acumula <b>4 reportes</b> de distintos partidos, la organización debe revisar su categoría. Los reportes se hacen desde cada partido.
+  </div>
+  ${allPlayers.length === 0 ? `<div class="empty">No hay jugadores registrados.</div>` : ""}
+  ${allPlayers.map(p => {
+    const count = state.votes.filter(v => v.flaggedId === p.id).length;
+    const pct = Math.min(count/4, 1) * 100;
+    const color = pct >= 100 ? "var(--red)" : pct >= 50 ? "#f59e0b" : "var(--court)";
+    return `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div style="font-weight:700">${p.name}</div>
+          <div style="font-size:12px;color:var(--muted)">${p.teamName}</div>
+        </div>
+        <span class="badge ${count>=4?'badge-red':count>=2?'badge-yellow':'badge-green'}">
+          ${count} ${count===1?"reporte":"reportes"}
+        </span>
+      </div>
+      <div class="vote-bar-bg">
+        <div class="vote-bar" style="width:${pct}%;background:${color}"></div>
+      </div>
+      ${count >= 4 ? `<div style="margin-top:8px;padding:8px 10px;background:#fee2e2;border-radius:8px;font-size:12px;color:var(--red)">⚠️ Superó el límite. La organización debe revisar.</div>` : ""}
+    </div>`;
+  }).join("")}`;
+}
+
+// ─── REGLAMENTO ──────────────────────────────────────────────────────────────
+function renderReglamento() {
+  const sections = [
+    { title: "📋 Formato del Torneo", items: [
+      "14 parejas · Liga todos contra todos · 13 fechas",
+      "1 partido por semana · Duración aproximada: 3 meses y medio",
+      "Top 4 clasifican a playoffs: 1°vs4° y 2°vs3°, luego Final y 3er puesto",
+    ]},
+    { title: "🎾 Formato de Partidos", items: [
+      "Mejor de 3 sets con tie-break en cada set",
+      "Si el partido queda 1-1 → el 3er set es súper tie-break a 10",
+      "Siempre se juegan los 3 sets (aunque alguien gane los primeros 2)",
+    ]},
+    { title: "📊 Sistema de Puntos", items: [
+      "Ganar 2-0 → 3 puntos",
+      "Ganar 2-1 → 2 puntos",
+      "Perder 1-2 → 1 punto",
+      "Perder 0-2 → 0 puntos",
+      "Desempate: Puntos > Diferencia de sets > Diferencia de games > H2H",
+    ]},
+    { title: "📅 Coordinación de Partidos", items: [
+      "Cada fecha corre de lunes a domingo",
+      "La pareja 'local' debe proponer mínimo 3 horarios disponibles",
+      "La otra pareja elige uno de esas opciones",
+      "Se puede reprogramar SOLO dentro de los próximos 7 días",
+      "Si no se juega en ese plazo → WO (walkover): 6-0/6-0 para el rival",
+      "Máximo 1 partido pendiente por equipo",
+    ]},
+    { title: "🏟️ Canchas", items: [
+      "Costo de cancha: mitad y mitad entre ambas parejas",
+      "Los horarios disponibles se ven en la sección 'Canchas'",
+      "Los equipos reservan su turno directamente desde la app",
+    ]},
+    { title: "⚠️ Control de Nivel", items: [
+      "Categoría: Séptima / Amateur",
+      "Después de cada partido, las parejas pueden reportar diferencia de nivel",
+      "Con 4 reportes independientes → revisión obligatoria por la organización",
+      "La organización puede advertir, pedir reemplazo o excluir del torneo",
+      "Reemplazo: mantiene puntos del equipo, debe ser nivel similar",
+      "Máximo 2 reemplazos por equipo en toda la liga",
+    ]},
+    { title: "💰 Premios", items: [
+      "Inscripción: $50.000 por equipo · Total recaudado: $700.000",
+      "🥇 1° puesto → $300.000",
+      "🥈 2° puesto → $180.000",
+      "🥉 3° puesto → $120.000",
+      "Organización / Fecha Final: $100.000 (trofeos, asado, premios especiales)",
+    ]},
+    { title: "🌟 Premios Especiales", items: [
+      "MVP del torneo (votación al final)",
+      "Pareja revelación",
+      "Fair Play: pareja más deportiva",
+      "Mejor partido de la liga",
+    ]},
+  ];
+  return `
+  <div class="section-title">📋 Reglamento Oficial</div>
+  ${sections.map(sec => `
+    <div class="card rule-section">
+      <h3>${sec.title}</h3>
+      <ul style="padding-left:16px">
+        ${sec.items.map(i => `<li>${i}</li>`).join("")}
+      </ul>
+    </div>
+  `).join("")}`;
+}
+
+// ─── ADMIN ───────────────────────────────────────────────────────────────────
+function renderAdmin() {
+  return `
+  <div class="section-title">✏️ Panel de Admin</div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div style="font-weight:700">👥 Equipos (${state.teams.length}/14)</div>
+      <button class="btn btn-primary btn-sm" data-action="open-add-team">＋ Agregar equipo</button>
+    </div>
+    ${state.teams.length === 0 ? `<div style="color:var(--muted);font-size:13px">No hay equipos. Empezá agregando el primero.</div>` : ""}
+    ${state.teams.map(t => `
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:9px 12px;background:var(--bg);border-radius:9px;margin-bottom:6px">
+        <div>
+          <div style="font-weight:600;font-size:14px">${t.name}</div>
+          <div style="font-size:12px;color:var(--muted)">${(t.players||[]).map(p=>p.name).join(" · ")}</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" style="border-color:var(--red);color:var(--red)" data-action="del-team" data-id="${t.id}">Eliminar</button>
+      </div>
+    `).join("")}
+  </div>
+
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:12px">📅 Fixture</div>
+    <div class="btn-row">
+      <button class="btn btn-primary" data-action="gen-fixture">🔄 Generar fixture (${state.teams.length} equipos)</button>
+      <button class="btn btn-secondary" style="border-color:var(--red);color:var(--red)" data-action="reset-fixture">⚠️ Resetear todo</button>
+    </div>
+    ${state.matches.length > 0 ? `<div style="margin-top:10px;font-size:13px;color:var(--muted)">${state.matches.length} partidos · ${[...new Set(state.matches.map(m=>m.round))].length} fechas generadas</div>` : ""}
+  </div>`;
+}
+
+// ─── MODALS ───────────────────────────────────────────────────────────────────
+function renderModal() {
+  if (!state.modal) return "";
+  const { type, data } = state.modal;
+
+  let content = "";
+
+  if (type === "admin-login") {
+    content = `
+      <div class="modal-title">🔒 Acceso Admin</div>
+      <input type="password" id="m-pass" placeholder="Contraseña" />
+      ${data.error ? `<div style="color:var(--red);font-size:12px;margin-bottom:8px">Contraseña incorrecta</div>` : ""}
+      <div class="btn-row">
+        <button class="btn btn-primary" data-action="do-login">Entrar</button>
+        <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">Contraseña configurada en el archivo HTML</div>`;
+  }
+
+  if (type === "add-team") {
+    content = `
+      <div class="modal-title">➕ Agregar Equipo</div>
+      <input id="m-tname" placeholder="Nombre del equipo (Ej: Los Pibes)" />
+      <input id="m-p1" placeholder="Jugador 1" />
+      <input id="m-p2" placeholder="Jugador 2" />
+      <div class="btn-row">
+        <button class="btn btn-primary" data-action="do-add-team">Guardar</button>
+        <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+      </div>`;
+  }
+
+  if (type === "add-court") {
+    content = `
+      <div class="modal-title">🏟️ Agregar Cancha</div>
+      <input id="m-cname" placeholder="Nombre (Ej: Club Norte)" />
+      <input id="m-slots" placeholder="Horarios disponibles (Ej: Lun 20hs, Mar 21:30hs, Vie 19hs)" />
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Separar horarios con coma</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" data-action="do-add-court">Guardar</button>
+        <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+      </div>`;
+  }
+
+  if (type === "book-slot") {
+    content = `
+      <div class="modal-title">🗓️ Reservar Horario</div>
+      <div style="margin-bottom:12px;font-size:14px">
+        <b>${data.courtName}</b> · ${data.slot}
+      </div>
+      <label class="lbl">¿Quién reserva?</label>
+      <select id="m-team">
+        <option value="">Seleccioná un equipo...</option>
+        ${state.teams.map(t => `<option value="${t.id}">${t.name}</option>`).join("")}
+      </select>
+      <div class="btn-row">
+        <button class="btn btn-primary" data-action="do-book" data-court="${data.courtId}" data-slot="${data.slot}">Confirmar</button>
+        <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+      </div>`;
+  }
+
+  if (type === "result") {
+    const m = data.match;
+    content = `
+      <div class="modal-title">✅ Cargar Resultado</div>
+      <div style="font-weight:700;margin-bottom:14px;text-align:center;font-size:14px">
+        ${teamName(m.homeId)} vs ${teamName(m.awayId)}
+      </div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:20px">
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${teamName(m.homeId)}</div>
+          <select id="m-hs" style="width:70px;text-align:center;font-size:22px;font-family:var(--font-display);letter-spacing:1px">
+            ${[0,1,2].map(n=>`<option value="${n}" ${n===2?'selected':''}>${n}</option>`).join("")}
+          </select>
+        </div>
+        <div style="font-size:24px;color:var(--muted);font-weight:700">—</div>
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${teamName(m.awayId)}</div>
+          <select id="m-as" style="width:70px;text-align:center;font-size:22px;font-family:var(--font-display);letter-spacing:1px">
+            ${[0,1,2].map(n=>`<option value="${n}">${n}</option>`).join("")}
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" data-action="do-result" data-id="${m.id}">Confirmar</button>
+        <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+      </div>`;
+  }
+
+  if (type === "vote") {
+    const m = data.match;
+    const home = state.teams.find(t => t.id === m.homeId);
+    const away = state.teams.find(t => t.id === m.awayId);
+    const allPlayers = [
+      ...(home?.players||[]).map(p => ({ ...p, teamName: home.name })),
+      ...(away?.players||[]).map(p => ({ ...p, teamName: away.name })),
+    ];
+    content = `
+      <div class="modal-title">🗳️ Reportar Nivel</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">¿El nivel fue parejo? Si alguien estaba claramente fuera de categoría, marcalo.</p>
+      <label class="lbl">¿Sos de qué equipo?</label>
+      <select id="m-voter">
+        <option value="">Seleccioná tu equipo...</option>
+        <option value="${m.homeId}">${home?.name}</option>
+        <option value="${m.awayId}">${away?.name}</option>
+      </select>
+      <label class="lbl">Nivel del partido</label>
+      <div class="btn-row" style="margin-bottom:14px">
+        <button class="btn btn-secondary btn-sm" id="vote-ok" data-vote="ok" style="${data.levelOk!==false?'background:var(--court);color:#fff;border-color:var(--court)':''}">✅ Fue parejo</button>
+        <button class="btn btn-secondary btn-sm" id="vote-bad" data-vote="bad" style="${data.levelOk===false?'background:var(--red);color:#fff;border-color:var(--red)':''}">⚠️ Hubo diferencia</button>
+      </div>
+      ${data.levelOk === false ? `
+        <label class="lbl">¿Quién estaba pasado de categoría?</label>
+        <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px">
+          ${allPlayers.map(p => `
+            <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer">
+              <input type="checkbox" class="vote-check" data-pid="${p.id}" ${(data.selected||[]).includes(p.id)?'checked':''}/>
+              ${p.name} <span style="font-size:12px;color:var(--muted)">(${p.teamName})</span>
+            </label>`).join("")}
+        </div>` : ""}
+      <div class="btn-row">
+        <button class="btn btn-primary" data-action="do-vote" data-matchid="${m.id}">Enviar</button>
+        <button class="btn btn-secondary" data-action="close-modal">Omitir</button>
+      </div>`;
+  }
+
+  return `<div class="overlay" id="overlay">
+    <div class="modal">${content}</div>
+  </div>`;
+}
+
+// ─── EVENTS ───────────────────────────────────────────────────────────────────
+function attachEvents() {
+  // Close overlay on background click
+  document.getElementById("overlay")?.addEventListener("click", e => {
+    if (e.target.id === "overlay") closeModal();
+  });
+
+  // Admin toggle
+  document.getElementById("btn-admin-toggle")?.addEventListener("click", () => {
+    if (state.isAdmin) { setState({ isAdmin: false }); return; }
+    openModal("admin-login", {});
+  });
+
+  // Nav tabs
+  document.querySelectorAll(".nav-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      setState({ tab: btn.dataset.tab, selectedRound: state.selectedRound });
+    });
+  });
+
+  // Round pills
+  document.querySelectorAll(".round-pill").forEach(pill => {
+    pill.addEventListener("click", () => setState({ selectedRound: Number(pill.dataset.round) }));
+  });
+
+  // Vote level toggle
+  document.getElementById("vote-ok")?.addEventListener("click", () => {
+    openModal("vote", { ...state.modal.data, levelOk: true, selected: [] });
+  });
+  document.getElementById("vote-bad")?.addEventListener("click", () => {
+    openModal("vote", { ...state.modal.data, levelOk: false });
+  });
+
+  // Vote checkboxes
+  document.querySelectorAll(".vote-check").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const selected = [...document.querySelectorAll(".vote-check:checked")].map(x => x.dataset.pid);
+      state.modal.data.selected = selected;
+    });
+  });
+
+  // Data actions
+  document.querySelectorAll("[data-action]").forEach(el => {
+    el.addEventListener("click", async () => {
+      const action = el.dataset.action;
+
+      if (action === "close-modal") closeModal();
+
+      if (action === "do-login") {
+        const pass = document.getElementById("m-pass")?.value;
+        if (pass === ADMIN_PASSWORD) { setState({ isAdmin: true, modal: null }); }
+        else openModal("admin-login", { error: true });
+      }
+
+      if (action === "open-add-team") openModal("add-team", {});
+      if (action === "do-add-team") {
+        const n = document.getElementById("m-tname")?.value.trim();
+        const p1 = document.getElementById("m-p1")?.value.trim();
+        const p2 = document.getElementById("m-p2")?.value.trim();
+        if (!n || !p1 || !p2) { toast("Completá todos los campos", "err"); return; }
+        await addTeam(n, p1, p2);
+        closeModal();
+      }
+
+      if (action === "del-team") await removeTeam(el.dataset.id);
+
+      if (action === "gen-fixture") {
+        if (!confirm("¿Generar fixture? Se sobreescribirán los partidos existentes.")) return;
+        await generateFixtureAction();
+      }
+      if (action === "reset-fixture") {
+        if (!confirm("¿Resetear todo? Se borran fixture, resultados, votos y reservas.")) return;
+        await resetFixture();
+      }
+
+      if (action === "open-add-court") openModal("add-court", {});
+      if (action === "do-add-court") {
+        const n = document.getElementById("m-cname")?.value.trim();
+        const s = document.getElementById("m-slots")?.value.trim();
+        if (!n) { toast("Poné un nombre", "err"); return; }
+        await addCourt(n, s);
+        closeModal();
+      }
+      if (action === "del-court") await removeCourt(el.dataset.id);
+
+      if (action === "open-book") openModal("book-slot", {
+        courtId: el.dataset.court,
+        slot: el.dataset.slot,
+        courtName: state.courts.find(c => c.id === el.dataset.court)?.name,
+      });
+      if (action === "do-book") {
+        const teamId = document.getElementById("m-team")?.value;
+        if (!teamId) { toast("Seleccioná un equipo", "err"); return; }
+        await bookSlot(el.dataset.court, el.dataset.slot, teamId);
+        closeModal();
+      }
+      if (action === "cancel-booking") await cancelBooking(el.dataset.id);
+
+      if (action === "open-result") {
+        const m = state.matches.find(x => x.id === el.dataset.id);
+        openModal("result", { match: m });
+      }
+      if (action === "do-result") {
+        const hs = Number(document.getElementById("m-hs")?.value);
+        const as_ = Number(document.getElementById("m-as")?.value);
+        await saveResult(el.dataset.id, hs, as_);
+        const m = state.matches.find(x => x.id === el.dataset.id);
+        openModal("vote", { match: m, levelOk: true, selected: [] });
+      }
+
+      if (action === "open-vote") {
+        const m = state.matches.find(x => x.id === el.dataset.id);
+        openModal("vote", { match: m, levelOk: true, selected: [] });
+      }
+      if (action === "do-vote") {
+        const voterTeamId = document.getElementById("m-voter")?.value;
+        if (!voterTeamId) { toast("Seleccioná tu equipo", "err"); return; }
+        const selected = state.modal.data.selected || [];
+        const levelOk = state.modal.data.levelOk !== false;
+        await submitVotes(el.dataset.matchid, voterTeamId, selected, levelOk);
+        closeModal();
+      }
+    });
+  });
+}
+
+// ─── BOOTSTRAP ────────────────────────────────────────────────────────────────
+firebaseOk = initFirebase();
+render();
+loadAll();
+</script>
+</body>
+</html>
