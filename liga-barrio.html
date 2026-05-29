@@ -263,7 +263,7 @@ function initFirebase() {
 
 // ─── STATE ────────────────────────────────────────────────────────────────────
 let state = {
-  teams: [], matches: [], courts: [], bookings: [], votes: [], results: [],
+  teams: [], matches: [], courts: [], bookings: [], votes: [], results: [], rules: [],
   tab: "tabla", isAdmin: false, loading: true,
   modal: null,   // { type, data }
   toast: null,
@@ -303,6 +303,7 @@ async function loadAll() {
   subscribe("bookings", "bookings");
   subscribe("votes",    "votes");
   subscribe("results",  "results");
+  subscribe("rules",    "rules");
   setState({ loading: false });
 }
 
@@ -376,6 +377,11 @@ async function addTeam(name, p1, p2) {
   toast(`Equipo "${name}" agregado ✅`);
 }
 
+async function updateTeam(id, name, players) {
+  await fsSet("teams", id, { name, players });
+  toast("Equipo actualizado ✅");
+}
+
 async function removeTeam(id) {
   await fsDel("teams", id);
   toast("Equipo eliminado");
@@ -398,9 +404,23 @@ async function resetFixture() {
 
 async function saveResult(matchId, homeSets, awaySets) {
   const id = `res-${matchId}`;
-  await fsSet("results", id, { id, matchId, homeSets, awaySets });
+  await fsSet("results", id, { id, matchId, homeSets: Number(homeSets), awaySets: Number(awaySets) });
   await fsSet("matches", matchId, { status: "jugado" });
   toast("Resultado guardado ✅");
+}
+async function deleteResult(matchId) {
+  await fsDel("results", `res-${matchId}`);
+  await fsSet("matches", matchId, { status: "pendiente" });
+  toast("Resultado eliminado");
+}
+async function updateCourt(id, name, slotsRaw) {
+  const slots = slotsRaw.split(",").map(s => s.trim()).filter(Boolean);
+  await fsSet("courts", id, { name, slots });
+  toast("Cancha actualizada ✅");
+}
+async function saveRule(id, title, content) {
+  await fsSet("rules", id, { id, title, content });
+  toast("Regla guardada ✅");
 }
 
 async function addCourt(name, slotsRaw) {
@@ -642,7 +662,7 @@ function renderFixture() {
         </div>
         ${court ? `<div class="match-info">🎾 ${court.name} · ${booking.timeSlot}</div>` : ""}
         <div class="btn-row" style="margin-top:10px">
-          ${state.isAdmin && m.status !== 'jugado' ? `<button class="btn btn-primary btn-sm" data-action="open-result" data-id="${m.id}">Cargar resultado</button>` : ""}
+          ${state.isAdmin ? `<button class="btn btn-primary btn-sm" data-action="open-result" data-id="${m.id}">${res ? '✏️ Editar resultado' : 'Cargar resultado'}</button>` : ""}
           ${m.status === 'jugado' ? `<button class="btn btn-secondary btn-sm" data-action="open-vote" data-id="${m.id}">Votar nivel</button>` : ""}
         </div>
       </div>`;
@@ -664,7 +684,7 @@ function renderCanchas() {
     <div class="card">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
         <div style="font-weight:700;font-size:16px">🏟️ ${court.name}</div>
-        ${state.isAdmin ? `<button class="btn btn-secondary btn-sm" style="border-color:var(--red);color:var(--red)" data-action="del-court" data-id="${court.id}">Eliminar</button>` : ""}
+        ${state.isAdmin ? `<div style="display:flex;gap:6px"><button class="btn btn-secondary btn-sm" data-action="open-edit-court" data-id="${court.id}">✏️ Editar</button><button class="btn btn-secondary btn-sm" style="border-color:var(--red);color:var(--red)" data-action="del-court" data-id="${court.id}">Eliminar</button></div>` : ""}
       </div>
       <div class="slots">
         ${(court.slots||[]).map(slot => {
@@ -720,46 +740,33 @@ function renderNivel() {
 }
 
 // ─── REGLAMENTO ──────────────────────────────────────────────────────────────
+const DEFAULT_RULES = [
+  {id:"r1",title:"📋 Formato del Torneo",content:"14 parejas · Liga todos contra todos · 13 fechas\n1 partido por semana · Duración: aprox. 3 meses y medio\nTop 4 clasifican a playoffs: 1°vs4° y 2°vs3°, luego Final y 3er puesto"},
+  {id:"r2",title:"🎾 Formato de Partidos",content:"Mejor de 3 sets con tie-break en cada set\nSi el partido queda 1-1 → 3er set es súper tie-break a 10\nSiempre se juegan los 3 sets aunque alguien gane los primeros 2"},
+  {id:"r3",title:"📊 Sistema de Puntos",content:"Ganar 2-0 → 3 puntos\nGanar 2-1 → 2 puntos\nPerder 1-2 → 1 punto\nPerder 0-2 → 0 puntos\nDesempate: Puntos > Diferencia de sets > Diferencia de games > H2H"},
+  {id:"r4",title:"📅 Coordinación de Partidos",content:"Cada fecha corre de lunes a domingo\nLa pareja 'local' debe proponer mínimo 3 horarios disponibles\nLa otra pareja elige uno de esas opciones\nSe puede reprogramar SOLO dentro de los próximos 7 días\nSi no se juega → WO (walkover): 6-0/6-0 para el rival\nMáximo 1 partido pendiente por equipo"},
+  {id:"r5",title:"🏟️ Canchas",content:"Costo de cancha: mitad y mitad entre ambas parejas\nLos horarios disponibles se ven en la sección 'Canchas'\nLos equipos reservan su turno directamente desde la app"},
+  {id:"r6",title:"⚠️ Control de Nivel",content:"Categoría: Séptima / Amateur\nDespués de cada partido las parejas pueden reportar diferencia de nivel\nCon 4 reportes independientes → revisión obligatoria\nLa organización puede advertir, pedir reemplazo o excluir del torneo\nReemplazo: mantiene puntos del equipo, debe ser nivel similar\nMáximo 2 reemplazos por equipo en toda la liga"},
+  {id:"r7",title:"💰 Premios",content:"Inscripción: $50.000 por equipo · Total recaudado: $700.000\n🥇 1° puesto → $300.000\n🥈 2° puesto → $180.000\n🥉 3° puesto → $120.000\nOrganización / Fecha Final: $100.000 (trofeos, asado, premios especiales)"},
+  {id:"r8",title:"🌟 Premios Especiales",content:"MVP del torneo (votación al final)\nPareja revelación\nFair Play: pareja más deportiva\nMejor partido de la liga"},
+];
+
 function renderReglamento() {
-  const sections = [
-    { title: "📋 Formato del Torneo", items: [
-      "14 parejas · Liga todos contra todos · 13 fechas",
-      "1 partido por semana · Duración aproximada: 3 meses y medio",
-      "Top 4 clasifican a playoffs: 1°vs4° y 2°vs3°, luego Final y 3er puesto",
-    ]},
-    { title: "🎾 Formato de Partidos", items: [
-      "Mejor de 3 sets con tie-break en cada set",
-      "Si el partido queda 1-1 → el 3er set es súper tie-break a 10",
-      "Siempre se juegan los 3 sets (aunque alguien gane los primeros 2)",
-    ]},
-    { title: "📊 Sistema de Puntos", items: [
-      "Ganar 2-0 → 3 puntos",
-      "Ganar 2-1 → 2 puntos",
-      "Perder 1-2 → 1 punto",
-      "Perder 0-2 → 0 puntos",
-      "Desempate: Puntos > Diferencia de sets > Diferencia de games > H2H",
-    ]},
-    { title: "📅 Coordinación de Partidos", items: [
-      "Cada fecha corre de lunes a domingo",
-      "La pareja 'local' debe proponer mínimo 3 horarios disponibles",
-      "La otra pareja elige uno de esas opciones",
-      "Se puede reprogramar SOLO dentro de los próximos 7 días",
-      "Si no se juega en ese plazo → WO (walkover): 6-0/6-0 para el rival",
-      "Máximo 1 partido pendiente por equipo",
-    ]},
-    { title: "🏟️ Canchas", items: [
-      "Costo de cancha: mitad y mitad entre ambas parejas",
-      "Los horarios disponibles se ven en la sección 'Canchas'",
-      "Los equipos reservan su turno directamente desde la app",
-    ]},
-    { title: "⚠️ Control de Nivel", items: [
-      "Categoría: Séptima / Amateur",
-      "Después de cada partido, las parejas pueden reportar diferencia de nivel",
-      "Con 4 reportes independientes → revisión obligatoria por la organización",
-      "La organización puede advertir, pedir reemplazo o excluir del torneo",
-      "Reemplazo: mantiene puntos del equipo, debe ser nivel similar",
-      "Máximo 2 reemplazos por equipo en toda la liga",
-    ]},
+  const saved = {};
+  state.rules.forEach(r => { saved[r.id] = r; });
+  const rules = DEFAULT_RULES.map(r => saved[r.id] || r);
+  return `
+  <div class="section-title">📋 Reglamento Oficial</div>
+  ${rules.map(r => `
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">
+        <div style="font-family:var(--font-display);font-size:16px;color:var(--blue);letter-spacing:.5px">${r.title}</div>
+        ${state.isAdmin ? `<button class="btn btn-secondary btn-sm" data-action="open-edit-rule" data-id="${r.id}">✏️ Editar</button>` : ""}
+      </div>
+      <div style="font-size:13px;color:#374151;line-height:1.7;white-space:pre-wrap">${r.content}</div>
+    </div>
+  `).join("")}`;
+}
     { title: "💰 Premios", items: [
       "Inscripción: $50.000 por equipo · Total recaudado: $700.000",
       "🥇 1° puesto → $300.000",
@@ -803,7 +810,10 @@ function renderAdmin() {
           <div style="font-weight:600;font-size:14px">${t.name}</div>
           <div style="font-size:12px;color:var(--muted)">${(t.players||[]).map(p=>p.name).join(" · ")}</div>
         </div>
-        <button class="btn btn-secondary btn-sm" style="border-color:var(--red);color:var(--red)" data-action="del-team" data-id="${t.id}">Eliminar</button>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-secondary btn-sm" data-action="open-edit-team" data-id="${t.id}">✏️</button>
+          <button class="btn btn-secondary btn-sm" style="border-color:var(--red);color:var(--red)" data-action="del-team" data-id="${t.id}">Eliminar</button>
+        </div>
       </div>
     `).join("")}
   </div>
@@ -849,6 +859,20 @@ function renderModal() {
       </div>`;
   }
 
+  if (type === "edit-team") {
+    const t = state.teams.find(x => x.id === data.id);
+    const p = t?.players || [];
+    content = `
+      <div class="modal-title">✏️ Editar Equipo</div>
+      <input id="m-tname" value="${t?.name||''}" placeholder="Nombre del equipo" />
+      <input id="m-p1" value="${p[0]?.name||''}" placeholder="Jugador 1" />
+      <input id="m-p2" value="${p[1]?.name||''}" placeholder="Jugador 2" />
+      <div class="btn-row">
+        <button class="btn btn-primary" data-action="do-edit-team" data-id="${data.id}">Guardar cambios</button>
+        <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+      </div>`;
+  }
+
   if (type === "add-court") {
     content = `
       <div class="modal-title">🏟️ Agregar Cancha</div>
@@ -857,6 +881,35 @@ function renderModal() {
       <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Separar horarios con coma</div>
       <div class="btn-row">
         <button class="btn btn-primary" data-action="do-add-court">Guardar</button>
+        <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+      </div>`;
+  }
+
+  if (type === "edit-court") {
+    const ct = state.courts.find(x => x.id === data.id);
+    content = `
+      <div class="modal-title">✏️ Editar Cancha</div>
+      <input id="m-cname" value="${ct?.name||''}" placeholder="Nombre" />
+      <input id="m-slots" value="${(ct?.slots||[]).join(', ')}" placeholder="Horarios" />
+      <div style="font-size:11px;color:var(--muted);margin-bottom:8px">Separar con coma</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" data-action="do-edit-court" data-id="${data.id}">Guardar cambios</button>
+        <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
+      </div>`;
+  }
+
+  if (type === "edit-rule") {
+    const saved = state.rules.find(r => r.id === data.id);
+    const def = DEFAULT_RULES.find(r => r.id === data.id);
+    const rule = saved || def;
+    content = `
+      <div class="modal-title">✏️ Editar Regla</div>
+      <label class="lbl">Título</label>
+      <input id="m-rtitle" value="${rule?.title||''}" />
+      <label class="lbl">Contenido (una regla por línea)</label>
+      <textarea id="m-rcontent" style="min-height:160px;resize:vertical">${rule?.content||''}</textarea>
+      <div class="btn-row">
+        <button class="btn btn-primary" data-action="do-edit-rule" data-id="${data.id}">Guardar cambios</button>
         <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
       </div>`;
   }
@@ -880,8 +933,9 @@ function renderModal() {
 
   if (type === "result") {
     const m = data.match;
+    const res = state.results.find(r => r.matchId === m.id);
     content = `
-      <div class="modal-title">✅ Cargar Resultado</div>
+      <div class="modal-title">${res ? '✏️ Editar' : '✅ Cargar'} Resultado</div>
       <div style="font-weight:700;margin-bottom:14px;text-align:center;font-size:14px">
         ${teamName(m.homeId)} vs ${teamName(m.awayId)}
       </div>
@@ -889,19 +943,20 @@ function renderModal() {
         <div style="text-align:center">
           <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${teamName(m.homeId)}</div>
           <select id="m-hs" style="width:70px;text-align:center;font-size:22px;font-family:var(--font-display);letter-spacing:1px">
-            ${[0,1,2].map(n=>`<option value="${n}" ${n===2?'selected':''}>${n}</option>`).join("")}
+            ${[0,1,2].map(n=>`<option value="${n}" ${n===(res?.homeSets??2)?'selected':''}>${n}</option>`).join("")}
           </select>
         </div>
         <div style="font-size:24px;color:var(--muted);font-weight:700">—</div>
         <div style="text-align:center">
           <div style="font-size:11px;color:var(--muted);margin-bottom:6px">${teamName(m.awayId)}</div>
           <select id="m-as" style="width:70px;text-align:center;font-size:22px;font-family:var(--font-display);letter-spacing:1px">
-            ${[0,1,2].map(n=>`<option value="${n}">${n}</option>`).join("")}
+            ${[0,1,2].map(n=>`<option value="${n}" ${n===(res?.awaySets??0)?'selected':''}>${n}</option>`).join("")}
           </select>
         </div>
       </div>
       <div class="btn-row">
         <button class="btn btn-primary" data-action="do-result" data-id="${m.id}">Confirmar</button>
+        ${res ? `<button class="btn btn-danger" data-action="do-del-result" data-id="${m.id}">Borrar resultado</button>` : ""}
         <button class="btn btn-secondary" data-action="close-modal">Cancelar</button>
       </div>`;
   }
@@ -1012,7 +1067,22 @@ function attachEvents() {
         closeModal();
       }
 
-      if (action === "del-team") await removeTeam(el.dataset.id);
+      if (action === "open-edit-team") openModal("edit-team", { id: el.dataset.id });
+      if (action === "do-edit-team") {
+        const n = document.getElementById("m-tname")?.value.trim();
+        const p1 = document.getElementById("m-p1")?.value.trim();
+        const p2 = document.getElementById("m-p2")?.value.trim();
+        if (!n || !p1 || !p2) { toast("Completá todos los campos", "err"); return; }
+        const t = state.teams.find(x => x.id === el.dataset.id);
+        const players = [
+          { id: t?.players?.[0]?.id || `${el.dataset.id}-1`, name: p1 },
+          { id: t?.players?.[1]?.id || `${el.dataset.id}-2`, name: p2 },
+        ];
+        await updateTeam(el.dataset.id, n, players);
+        closeModal();
+      }
+
+      if (action === "del-team") { if (!confirm("¿Eliminar este equipo?")) return; await removeTeam(el.dataset.id); }
 
       if (action === "gen-fixture") {
         if (!confirm("¿Generar fixture? Se sobreescribirán los partidos existentes.")) return;
@@ -1031,7 +1101,15 @@ function attachEvents() {
         await addCourt(n, s);
         closeModal();
       }
-      if (action === "del-court") await removeCourt(el.dataset.id);
+      if (action === "open-edit-court") openModal("edit-court", { id: el.dataset.id });
+      if (action === "do-edit-court") {
+        const n = document.getElementById("m-cname")?.value.trim();
+        const s = document.getElementById("m-slots")?.value.trim();
+        if (!n) { toast("Poné un nombre", "err"); return; }
+        await updateCourt(el.dataset.id, n, s);
+        closeModal();
+      }
+      if (action === "del-court") { if (!confirm("¿Eliminar esta cancha?")) return; await removeCourt(el.dataset.id); }
 
       if (action === "open-book") openModal("book-slot", {
         courtId: el.dataset.court,
@@ -1057,6 +1135,11 @@ function attachEvents() {
         const m = state.matches.find(x => x.id === el.dataset.id);
         openModal("vote", { match: m, levelOk: true, selected: [] });
       }
+      if (action === "do-del-result") {
+        if (!confirm("¿Borrar este resultado? El partido vuelve a estado pendiente.")) return;
+        await deleteResult(el.dataset.id);
+        closeModal();
+      }
 
       if (action === "open-vote") {
         const m = state.matches.find(x => x.id === el.dataset.id);
@@ -1068,6 +1151,15 @@ function attachEvents() {
         const selected = state.modal.data.selected || [];
         const levelOk = state.modal.data.levelOk !== false;
         await submitVotes(el.dataset.matchid, voterTeamId, selected, levelOk);
+        closeModal();
+      }
+
+      if (action === "open-edit-rule") openModal("edit-rule", { id: el.dataset.id });
+      if (action === "do-edit-rule") {
+        const title = document.getElementById("m-rtitle")?.value.trim();
+        const content = document.getElementById("m-rcontent")?.value.trim();
+        if (!title) { toast("Poné un título", "err"); return; }
+        await saveRule(el.dataset.id, title, content);
         closeModal();
       }
     });
