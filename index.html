@@ -767,31 +767,6 @@ function renderReglamento() {
     </div>
   `).join("")}`;
 }
-    { title: "💰 Premios", items: [
-      "Inscripción: $50.000 por equipo · Total recaudado: $700.000",
-      "🥇 1° puesto → $300.000",
-      "🥈 2° puesto → $180.000",
-      "🥉 3° puesto → $120.000",
-      "Organización / Fecha Final: $100.000 (trofeos, asado, premios especiales)",
-    ]},
-    { title: "🌟 Premios Especiales", items: [
-      "MVP del torneo (votación al final)",
-      "Pareja revelación",
-      "Fair Play: pareja más deportiva",
-      "Mejor partido de la liga",
-    ]},
-  ];
-  return `
-  <div class="section-title">📋 Reglamento Oficial</div>
-  ${sections.map(sec => `
-    <div class="card rule-section">
-      <h3>${sec.title}</h3>
-      <ul style="padding-left:16px">
-        ${sec.items.map(i => `<li>${i}</li>`).join("")}
-      </ul>
-    </div>
-  `).join("")}`;
-}
 
 // ─── ADMIN ───────────────────────────────────────────────────────────────────
 function renderAdmin() {
