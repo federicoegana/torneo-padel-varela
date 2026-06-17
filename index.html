@@ -323,23 +323,49 @@ function calcStandings() {
     if (!m) return;
     const h = stats[m.homeId], a = stats[m.awayId];
     if (!h || !a) return;
-    h.pj++; a.pj++;
-    h.sf += r.homeSets; h.sc += r.awaySets;
-    a.sf += r.awaySets; a.sc += r.homeSets;
-    if (r.homeSets > r.awaySets) {
-      h.pg++; a.pp++;
-      h.pts += r.awaySets === 0 ? 3 : 2;
-      if (r.awaySets === 1) a.pts += 1;
-    } else {
-      a.pg++; h.pp++;
-      a.pts += r.homeSets === 0 ? 3 : 2;
-      if (r.homeSets === 1) h.pts += 1;
-    }
+
+h.pj++;
+a.pj++;
+
+h.sf += r.homeSets;
+h.sc += r.awaySets;
+
+a.sf += r.awaySets;
+a.sc += r.homeSets;
+
+if (r.homeSets > r.awaySets) {
+
+  h.pg++;
+  a.pp++;
+
+  h.pts += 3;
+
+} else {
+
+  a.pg++;
+  h.pp++;
+
+  a.pts += 3;
+
+}
   });
   return Object.values(stats).sort((a,b) => {
-    if (b.pts !== a.pts) return b.pts - a.pts;
-    return (b.sf-b.sc) - (a.sf-a.sc);
-  });
+
+  if (b.pts !== a.pts)
+    return b.pts - a.pts;
+
+  const diffA = a.sf - a.sc;
+  const diffB = b.sf - b.sc;
+
+  if (diffB !== diffA)
+    return diffB - diffA;
+
+  if (b.sf !== a.sf)
+    return b.sf - a.sf;
+
+  return a.name.localeCompare(b.name);
+
+});
 }
 
 function generateFixture(teams) {
@@ -607,7 +633,7 @@ function renderTabla() {
     <table>
       <thead><tr>
         <th>#</th><th style="text-align:left">Equipo</th>
-        <th>PJ</th><th>PG</th><th>PP</th><th>SF</th><th>SC</th><th>PTS</th><th>⚠️</th>
+        <th>PJ</th><th>PG</th><th>PP</th><th>SF</th><th>SC</th><th>DS</th><th>PTS</th><th>⚠️</th>
       </tr></thead>
       <tbody>
         ${standings.map((t,i) => {
@@ -617,10 +643,24 @@ function renderTabla() {
           return `<tr>
             <td style="font-weight:700;color:${i<3?'#f59e0b':'#374151'}">${medals[i] || i+1}</td>
             <td class="team-name">${t.name}</td>
-            <td>${t.pj}</td><td>${t.pg}</td><td>${t.pp}</td>
-            <td>${t.sf}</td><td>${t.sc}</td>
-            <td style="font-weight:800;color:var(--blue)">${t.pts}</td>
-            <td style="color:${flags>=4?'var(--red)':flags>=2?'#f59e0b':'var(--muted)'}">${flags||"-"}</td>
+            <td>${t.pj}</td>
+<td>${t.pg}</td>
+<td>${t.pp}</td>
+
+<td>${t.sf}</td>
+<td>${t.sc}</td>
+
+<td style="font-weight:700">
+  ${(t.sf - t.sc) > 0 ? '+' : ''}${t.sf - t.sc}
+</td>
+
+<td style="font-weight:800;color:var(--blue)">
+  ${t.pts}
+</td>
+
+<td style="color:${flags>=4?'var(--red)':flags>=2?'#f59e0b':'var(--muted)'}">
+  ${flags||"-"}
+</td>
           </tr>`;
         }).join("")}
       </tbody>
